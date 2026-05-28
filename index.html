@@ -7,9 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* デバイスでのズームや意図しない選択を防止 */
-        body { 
-            touch-action: manipulation; 
+        /* ボタンなどの不要な長押しメニューを禁止 */
+        .no-select {
+            -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
         }
@@ -31,7 +31,6 @@
             background-image: linear-gradient(to bottom, #b91c1c, #991b1b) !important;
         }
 
-        /* カスタムスクロールバー非表示 */
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -81,13 +80,13 @@
                  class="w-full drop-shadow-2xl object-contain pointer-events-none"
                  onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%234b5563%22 stroke-width=%221%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 22V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16%22/%3E%3Cpath d=%22M16 4V2%22/%3E%3Cpath d=%22M8 4V2%22/%3E%3Crect x=%228%22 y=%228%22 width=%228%22 height=%226%22 rx=%221%22/%3E%3Ccircle cx=%2212%22 cy=%2218%22 r=%222%22/%3E%3C/svg%3E'" />
             
-            <div class="absolute -right-2 bottom-4 bg-gray-900 border border-gray-600 rounded-xl p-3 flex flex-col items-center shadow-xl z-20">
+            <div class="absolute -right-2 bottom-4 bg-gray-900 border border-gray-600 rounded-xl p-3 flex flex-col items-center shadow-xl z-20 no-select">
                 <div id="status-light" class="w-6 h-6 rounded-full bg-gray-600 shadow-[inset_0_3px_5px_rgba(0,0,0,0.5)] mb-2 transition-colors duration-200"></div>
                 <span id="status-text" class="text-[11px] text-gray-300 font-mono font-bold tracking-wider">STANDBY</span>
             </div>
         </div>
 
-        <button id="ptt-btn" class="mt-4 w-36 h-36 bg-gradient-to-b from-red-500 to-red-700 rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.5),inset_0_5px_10px_rgba(255,255,255,0.3)] border-4 border-red-900 select-none transition-transform duration-75 text-white font-bold text-2xl tracking-wider relative group outline-none">
+        <button id="ptt-btn" class="mt-4 w-36 h-36 bg-gradient-to-b from-red-500 to-red-700 rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.5),inset_0_5px_10px_rgba(255,255,255,0.3)] border-4 border-red-900 no-select transition-transform duration-75 text-white font-bold text-2xl tracking-wider relative group outline-none">
             <div class="z-10 pointer-events-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-tight text-center flex flex-col items-center">
                 <i class="fas fa-microphone mb-1 text-xl opacity-80"></i>
                 <span class="block">PUSH</span>
@@ -95,7 +94,7 @@
             </div>
         </button>
         
-        <p class="text-gray-500 text-xs mt-8 px-8 text-center leading-relaxed">
+        <p class="text-gray-500 text-xs mt-8 px-8 text-center leading-relaxed no-select">
             ボタンを<strong class="text-gray-300">押している間だけ</strong>録音・送信します。<br>
             受信中は送信できません。
         </p>
@@ -105,13 +104,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // ==========================================
-        // 🔴 ここを自分のFirebase設定に書き換えてください！
-        // ==========================================
-        // 不要なコードを削除し、綺麗な設定オブジェクトに修正しました
         const firebaseConfig = {
             apiKey: "AIzaSyCdz8LYnBOwGzMXUwQj-d11KKySSlR9Dvs",
             authDomain: "my-toranshiba.firebaseapp.com",
@@ -121,16 +116,9 @@
             appId: "1:149800877079:web:b698517a9f8c321d35f052"
         };
 
-        // プロジェクト名に合わせて変更しました
         const appId = 'my-toranshiba'; 
 
-        // ==========================================
-        // 以下は元のコードのままで大丈夫です
-        // ==========================================
-
-        // ==========================================
         // UI Elements
-        // ==========================================
         const loginScreen = document.getElementById('login-screen');
         const transceiverScreen = document.getElementById('transceiver-screen');
         const passwordInput = document.getElementById('password-input');
@@ -143,9 +131,7 @@
         const loginError = document.getElementById('login-error');
         const toastContainer = document.getElementById('toast-container');
 
-        // ==========================================
         // App State
-        // ==========================================
         let currentUser = null;
         let currentChannel = '';
         let unsubscribeSnapshot = null;
@@ -159,9 +145,7 @@
         let isPlaying = false;
         let audioQueue = [];
 
-        // ==========================================
         // Initialization & Auth
-        // ==========================================
         async function initFirebase() {
             try {
                 if (!firebaseConfig.projectId) {
@@ -172,7 +156,6 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // 匿名ログイン
                 await signInAnonymously(auth);
                 
                 onAuthStateChanged(auth, (user) => {
@@ -190,9 +173,6 @@
             }
         }
 
-        // ==========================================
-        // UI Helpers
-        // ==========================================
         function showError(msg) {
             loginError.innerText = msg;
             loginError.classList.remove('hidden');
@@ -216,7 +196,6 @@
             
             toastContainer.appendChild(toast);
             
-            // Animate out
             setTimeout(() => {
                 toast.classList.replace('translate-y-0', '-translate-y-4');
                 toast.classList.replace('opacity-100', 'opacity-0');
@@ -225,7 +204,6 @@
         }
 
         function setStatus(state) {
-            // Reset states
             statusLight.className = "w-6 h-6 rounded-full shadow-[inset_0_3px_5px_rgba(0,0,0,0.5)] mb-2 transition-colors duration-200";
             pttBtn.classList.remove('recording-pulse');
             
@@ -259,10 +237,6 @@
                 oscillator.stop(0.001);
             }
         }
-
-        // ==========================================
-        // Actions
-        // ==========================================
         
         // 1. 接続処理
         connectBtn.addEventListener('click', async () => {
@@ -377,9 +351,6 @@
             });
         }
 
-        // ==========================================
-        // Audio Playback (Receiver)
-        // ==========================================
         function queueAudio(base64Audio) {
             audioQueue.push(base64Audio);
             if (!isPlaying && !isRecording) {
@@ -416,11 +387,10 @@
             });
         }
 
-        // ==========================================
-        // Push To Talk Logic (Sender)
-        // ==========================================
+        // Push To Talk Logic
         function startRecording(e) {
-            if (e.cancelable) e.preventDefault(); 
+            // PTTボタン上でのみズーム等の挙動を抑制
+            if (e && e.cancelable) e.preventDefault(); 
             
             if (!mediaRecorder || isRecording || isPlaying) {
                 if (isPlaying) showToast("受信中は送信できません", "error");
@@ -443,8 +413,7 @@
         }
 
         function stopRecording(e) {
-            if (e && e.cancelable) e.preventDefault();
-            
+            // 他の要素への影響を無くすため、ここではpreventDefault()を行わない
             if (!isRecording) {
                 pttBtn.classList.remove('ptt-active');
                 return;
@@ -463,6 +432,7 @@
             }
         }
 
+        // イベント登録（干渉を防ぐためクリーンに分離）
         pttBtn.addEventListener('mousedown', startRecording);
         pttBtn.addEventListener('touchstart', startRecording, { passive: false });
 
@@ -471,7 +441,6 @@
         pttBtn.addEventListener('mouseleave', stopRecording);
         pttBtn.addEventListener('touchcancel', stopRecording);
 
-        // 録音完了時の処理
         async function processAudioAndSend() {
             if (audioChunks.length === 0) return;
             
@@ -497,16 +466,13 @@
                     });
                 } catch (err) {
                     console.error("送信エラー:", err);
-                    showToast("送信に失敗しました", "error");
-                } finally {
+                    showToast("送信に失敗しました。Firebaseのルールを確認してください。", "error");
+                } finaly {
                     audioChunks = []; 
                 }
             };
         }
 
-        // ==========================================
-        // 起動時処理
-        // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
             connectBtn.disabled = true;
             connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備中...';
