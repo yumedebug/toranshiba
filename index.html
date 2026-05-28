@@ -7,104 +7,72 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* ボタンなどの不要な長押しメニューを禁止 */
-        .no-select {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-        
-        /* 録音中のボタンアニメーション */
-        .recording-pulse { 
-            animation: pulse 1.5s infinite; 
-        }
+        .no-select { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+        .recording-pulse { animation: pulse 1.5s infinite; }
         @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7), inset 0 5px 10px rgba(255,255,255,0.2); }
-            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0), inset 0 5px 10px rgba(255,255,255,0.2); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0), inset 0 5px 10px rgba(255,255,255,0.2); }
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-
-        /* 押下時のスタイル微調整 */
-        .ptt-active {
-            transform: scale(0.92) !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5), inset 0 10px 20px rgba(0,0,0,0.6) !important;
-            background-image: linear-gradient(to bottom, #b91c1c, #991b1b) !important;
-        }
-
+        .ptt-active { transform: scale(0.92) !important; background-image: linear-gradient(to bottom, #b91c1c, #991b1b) !important; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-gray-900 text-white font-sans antialiased min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
-    <div id="login-screen" class="flex flex-col items-center bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full z-10 border border-gray-700">
-        <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mb-4 shadow-inner">
+    <div id="login-screen" class="flex flex-col items-center bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-gray-700">
+        <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mb-4">
             <i class="fas fa-walkie-talkie text-3xl text-green-400"></i>
         </div>
-        <h1 class="text-2xl font-bold mb-2 text-white">Web Transceiver</h1>
-        <p class="text-gray-400 text-sm mb-8 text-center leading-relaxed">
-            同じパスワードを入力した相手と<br>トランシーバー通信ができます。
-        </p>
+        <h1 class="text-2xl font-bold mb-2">Web Transceiver</h1>
+        <p class="text-gray-400 text-sm mb-8 text-center">同じパスワードで通信できます。</p>
         
         <div class="w-full mb-6">
-            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-wider" for="password-input">
-                Channel Password
-            </label>
+            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">Channel Password</label>
             <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-key text-gray-500"></i>
-                </div>
-                <input type="text" id="password-input" class="w-full bg-gray-900 text-white border border-gray-600 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors" placeholder="半角英数字で入力..." autocomplete="off" />
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center"><i class="fas fa-key text-gray-500"></i></div>
+                <input type="text" id="password-input" class="w-full bg-gray-900 text-white border border-gray-600 rounded-xl pl-10 pr-4 py-3 focus:outline-none" placeholder="半角英数字で入力..." />
             </div>
         </div>
         
-        <button id="connect-btn" class="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-xl transition-colors shadow-lg flex justify-center items-center gap-2">
+        <button id="connect-btn" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg flex justify-center items-center gap-2">
             <i class="fas fa-signal"></i> 通信を開始する
         </button>
         <div id="login-error" class="text-red-400 text-sm mt-4 text-center hidden bg-red-900/30 p-2 rounded w-full"></div>
     </div>
 
-    <div id="transceiver-screen" class="hidden flex-col items-center max-w-sm w-full relative bg-gray-800 rounded-3xl pb-10 shadow-2xl border border-gray-700 overflow-hidden">
-        
+    <div id="transceiver-screen" class="hidden flex-col items-center max-w-sm w-full bg-gray-800 rounded-3xl pb-10 shadow-2xl border border-gray-700 overflow-hidden">
         <div class="bg-gray-900 w-full p-5 flex justify-between items-center border-b border-gray-700">
-            <div class="text-green-400 font-mono font-bold text-lg flex items-center drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]">
-                <i class="fas fa-broadcast-tower mr-2 text-sm"></i> CH-<span id="current-channel" class="ml-1 uppercase">---</span>
+            <div class="text-green-400 font-mono font-bold text-lg">
+                <i class="fas fa-broadcast-tower mr-2"></i> CH-<span id="current-channel" class="ml-1 uppercase">---</span>
             </div>
-            <button id="disconnect-btn" class="text-gray-400 hover:text-red-400 text-sm transition-colors flex items-center gap-1 bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
+            <button id="disconnect-btn" class="text-gray-400 hover:text-red-400 text-sm bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
                 <i class="fas fa-power-off"></i> 切断
             </button>
         </div>
         
         <div class="relative w-56 mt-8 mb-6 flex justify-center items-center">
-            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjLomdDIwGTXWN_rkXzP9oOwNlRxMW3LC3aOOQ35Sz0-f91WUCxu8-vgnWUOg9MXPpHxEoCl5EyslTSJeMRX9_ZHuDKooSSLsHGEIn0Gxb5zJ0B-sGpUzYA7Z2E36eZP6gHclOsHRC1rixE/s800/machine_transceiver.png" 
-                 alt="トランシーバー" 
-                 class="w-full drop-shadow-2xl object-contain pointer-events-none"
-                 onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%234b5563%22 stroke-width=%221%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 22V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16%22/%3E%3Cpath d=%22M16 4V2%22/%3E%3Cpath d=%22M8 4V2%22/%3E%3Crect x=%228%22 y=%228%22 width=%228%22 height=%226%22 rx=%221%22/%3E%3Ccircle cx=%2212%22 cy=%2218%22 r=%222%22/%3E%3C/svg%3E'" />
-            
-            <div class="absolute -right-2 bottom-4 bg-gray-900 border border-gray-600 rounded-xl p-3 flex flex-col items-center shadow-xl z-20 no-select">
-                <div id="status-light" class="w-6 h-6 rounded-full bg-gray-600 shadow-[inset_0_3px_5px_rgba(0,0,0,0.5)] mb-2 transition-colors duration-200"></div>
-                <span id="status-text" class="text-[11px] text-gray-300 font-mono font-bold tracking-wider">STANDBY</span>
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjLomdDIwGTXWN_rkXzP9oOwNlRxMW3LC3aOOQ35Sz0-f91WUCxu8-vgnWUOg9MXPpHxEoCl5EyslTSJeMRX9_ZHuDKooSSLsHGEIn0Gxb5zJ0B-sGpUzYA7Z2E36eZP6gHclOsHRC1rixE/s800/machine_transceiver.png" class="w-full object-contain pointer-events-none" />
+            <div class="absolute -right-2 bottom-4 bg-gray-900 border border-gray-600 rounded-xl p-3 flex flex-col items-center shadow-xl no-select">
+                <div id="status-light" class="w-6 h-6 rounded-full bg-green-500 shadow-lg mb-2"></div>
+                <span id="status-text" class="text-[11px] text-green-400 font-mono font-bold">STANDBY</span>
             </div>
         </div>
 
-        <button id="ptt-btn" class="mt-4 w-36 h-36 bg-gradient-to-b from-red-500 to-red-700 rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.5),inset_0_5px_10px_rgba(255,255,255,0.3)] border-4 border-red-900 no-select transition-transform duration-75 text-white font-bold text-2xl tracking-wider relative group outline-none">
-            <div class="z-10 pointer-events-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-tight text-center flex flex-col items-center">
-                <i class="fas fa-microphone mb-1 text-xl opacity-80"></i>
+        <button id="ptt-btn" class="mt-4 w-36 h-36 bg-gradient-to-b from-red-500 to-red-700 rounded-full flex items-center justify-center border-4 border-red-900 no-select text-white font-bold text-2xl relative outline-none">
+            <div class="z-10 pointer-events-none text-center">
+                <i class="fas fa-microphone mb-1 text-xl"></i>
                 <span class="block">PUSH</span>
-                <span class="text-xs tracking-widest mt-0.5 text-gray-200">TO TALK</span>
+                <span class="text-xs mt-0.5 text-gray-200">TO TALK</span>
             </div>
         </button>
-        
-        <p class="text-gray-500 text-xs mt-8 px-8 text-center leading-relaxed no-select">
-            ボタンを<strong class="text-gray-300">押している間だけ</strong>録音・送信します。<br>
-            受信中は送信できません。
-        </p>
     </div>
 
-    <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-max"></div>
+    <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 w-max"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         const firebaseConfig = {
@@ -118,7 +86,6 @@
 
         const appId = 'my-toranshiba'; 
 
-        // UI Elements
         const loginScreen = document.getElementById('login-screen');
         const transceiverScreen = document.getElementById('transceiver-screen');
         const passwordInput = document.getElementById('password-input');
@@ -131,48 +98,35 @@
         const loginError = document.getElementById('login-error');
         const toastContainer = document.getElementById('toast-container');
 
-        // App State
         let currentUser = null;
         let currentChannel = '';
         let unsubscribeSnapshot = null;
         let db, auth;
         let joinTimestamp = 0;
         
-        // Audio State
         let mediaRecorder = null;
         let audioChunks = [];
         let isRecording = false;
         let isPlaying = false;
         let audioQueue = [];
 
-        // Initialization & Auth
-        async function initFirebase() {
-            try {
-                if (!firebaseConfig.projectId) {
-                    throw new Error("Firebase configuration is missing.");
-                }
-
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                // ログイン状態の監視を先にセット
-                onAuthStateChanged(auth, (user) => {
-                    currentUser = user;
-                    if(user) {
-                        connectBtn.disabled = false;
-                        connectBtn.innerHTML = '<i class="fas fa-signal"></i> 通信を開始する';
-                    } else {
-                        connectBtn.disabled = true;
-                    }
-                });
-
-                await signInAnonymously(auth);
-                
-            } catch (err) {
-                console.error("Firebase Init Error:", err);
-                showError("サーバーへの接続設定が失敗しました。ネット環境を確認してください。");
-            }
+        // 起動時にまずFirebaseを即初期化
+        try {
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            
+            // バックグラウンドで勝手にログインさせる
+            signInAnonymously(auth).then(cred => {
+                currentUser = cred.user;
+            }).catch(e => {
+                console.error(e);
+                // 失敗してもボタンは押せるようにエラー表示だけに留める
+                showError("匿名ログインに失敗しました。リロードしてください。");
+            });
+        } catch (err) {
+            console.error(err);
+            showError("Firebaseの初期化に失敗しました。");
         }
 
         function showError(msg) {
@@ -182,67 +136,31 @@
 
         function showToast(msg, type="info") {
             const toast = document.createElement('div');
-            let colorClass = "bg-gray-800 border-gray-600";
-            let icon = '<i class="fas fa-info-circle text-blue-400 mr-2"></i>';
-            
-            if (type === "error") {
-                colorClass = "bg-red-900 border-red-700";
-                icon = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>';
-            } else if (type === "success") {
-                colorClass = "bg-green-900 border-green-700";
-                icon = '<i class="fas fa-check-circle text-green-400 mr-2"></i>';
-            }
-            
-            toast.className = `${colorClass} border text-white px-4 py-3 rounded-xl shadow-2xl text-sm transition-all duration-300 transform translate-y-0 opacity-100 flex items-center min-w-[200px] justify-center`;
-            toast.innerHTML = `${icon}<span>${msg}</span>`;
-            
+            toast.className = `bg-gray-800 border border-gray-600 text-white px-4 py-3 rounded-xl shadow-2xl text-sm flex items-center justify-center`;
+            toast.innerHTML = `<span>${msg}</span>`;
             toastContainer.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.classList.replace('translate-y-0', '-translate-y-4');
-                toast.classList.replace('opacity-100', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            setTimeout(() => toast.remove(), 3000);
         }
 
         function setStatus(state) {
-            statusLight.className = "w-6 h-6 rounded-full shadow-[inset_0_3px_5px_rgba(0,0,0,0.5)] mb-2 transition-colors duration-200";
-            
-            switch(state) {
-                case 'STANDBY':
-                    statusLight.classList.add('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.8)]');
-                    statusText.innerText = "STANDBY";
-                    statusText.className = "text-[11px] text-green-400 font-mono font-bold tracking-wider";
-                    break;
-                case 'RECORDING':
-                    statusLight.classList.add('bg-red-500', 'shadow-[0_0_15px_rgba(239,68,68,1)]');
-                    statusText.innerText = "TX (送信中)";
-                    statusText.className = "text-[11px] text-red-400 font-mono font-bold tracking-wider";
-                    break;
-                case 'PLAYING':
-                    statusLight.classList.add('bg-yellow-400', 'shadow-[0_0_15px_rgba(250,204,21,1)]');
-                    statusText.innerText = "RX (受信中)";
-                    statusText.className = "text-[11px] text-yellow-400 font-mono font-bold tracking-wider";
-                    break;
-            }
-        }
-
-        function unlockAudioContext() {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                const ctx = new AudioContext();
-                const oscillator = ctx.createOscillator();
-                oscillator.connect(ctx.destination);
-                oscillator.start(0);
-                oscillator.stop(0.001);
+            statusLight.className = "w-6 h-6 rounded-full mb-2";
+            if (state === 'STANDBY') {
+                statusLight.classList.add('bg-green-500');
+                statusText.innerText = "STANDBY";
+            } else if (state === 'RECORDING') {
+                statusLight.classList.add('bg-red-500');
+                statusText.innerText = "TX (送信中)";
+            } else if (state === 'PLAYING') {
+                statusLight.classList.add('bg-yellow-400');
+                statusText.innerText = "RX (受信中)";
             }
         }
         
-        // 1. 接続処理
+        // ボタンクリックイベント
         connectBtn.addEventListener('click', async () => {
-            loginError.classList.add('hidden'); // エラーを一旦クリア
-            
+            loginError.classList.add('hidden');
             const pwd = passwordInput.value.trim();
+            
             if(!pwd) {
                 showError("パスワードを入力してください");
                 return;
@@ -250,50 +168,36 @@
             
             const safeChannel = pwd.replace(/[^a-zA-Z0-9]/g, '');
             if(!safeChannel) {
-                showError("パスワードには半角英数字を含めてください");
+                showError("パスワードは半角英数字で入力してください");
                 return;
             }
 
-            if(!currentUser) {
-                showError("サーバーに未接続です。少し待ってから再度押すか、再読み込みしてください。");
-                return;
+            // もしログインがまだ完了していなければ、ここで強制的に再ログインを試みる
+            if (!currentUser && auth) {
+                try {
+                    const cred = await signInAnonymously(auth);
+                    currentUser = cred.user;
+                } catch(e) {
+                    showError("サーバーへの接続がタイムアウトしました。もう一度押してください。");
+                    return;
+                }
             }
 
-            // 【超重要】スマホ・非HTTPS環境でのフリーズを防ぐ安全弁
+            // マイクが使える環境かチェック
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                showError("このブラウザや環境はマイク通信に対応していません。SafariやChromeを使い、URLが「https://」で始まっているか確認してください。LINE等のアプリ内から開いている場合は右下のコンパスや「ブラウザで開く」を押してください。");
+                showError("このブラウザ環境はマイクに対応していません。https でアクセスしているか確認してください。");
                 return;
             }
-
-            connectBtn.disabled = true;
-            connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> マイクを準備中...';
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                let mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
+                mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
                 
-                let mimeType = '';
-                if (MediaRecorder.isTypeSupported('audio/webm')) {
-                    mimeType = 'audio/webm';
-                } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-                    mimeType = 'audio/mp4';
-                }
-
-                const options = mimeType ? { mimeType } : {};
-                mediaRecorder = new MediaRecorder(stream, options);
-                
-                mediaRecorder.ondataavailable = e => {
-                    if (e.data.size > 0) audioChunks.push(e.data);
-                };
-
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
                 mediaRecorder.onstop = processAudioAndSend;
-                
-                unlockAudioContext();
-
             } catch (err) {
-                console.error("Mic Error:", err);
-                connectBtn.disabled = false;
-                connectBtn.innerHTML = '<i class="fas fa-signal"></i> 通信を開始する';
-                showError("マイクへのアクセスが拒否されました。設定でマイクを許可してください。");
+                showError("マイクの許可が拒否されました。設定を確認してください。");
                 return;
             }
 
@@ -305,186 +209,84 @@
             transceiverScreen.classList.add('flex');
             
             setStatus('STANDBY');
-            showToast(`CH-${safeChannel} に接続しました`, "success");
-
             startListening(safeChannel);
         });
 
-        // 2. 切断処理
         disconnectBtn.addEventListener('click', () => {
-            if(unsubscribeSnapshot) {
-                unsubscribeSnapshot();
-                unsubscribeSnapshot = null;
-            }
-            if(mediaRecorder && mediaRecorder.state !== "inactive") {
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            }
-            
-            currentChannel = '';
-            audioQueue = []; 
-            isPlaying = false;
-            isRecording = false;
-            
-            transceiverScreen.classList.add('hidden');
-            transceiverScreen.classList.remove('flex');
-            loginScreen.classList.remove('hidden');
-            passwordInput.value = '';
-            loginError.classList.add('hidden');
-            
-            connectBtn.disabled = false;
-            connectBtn.innerHTML = '<i class="fas fa-signal"></i> 通信を開始する';
-            
-            showToast("切断しました");
+            location.reload(); // 確実にすべてをリセットするため、切断時はページごとリロード
         });
 
-        // 3. データ受信リスナー
         function startListening(channelName) {
             joinTimestamp = Date.now();
-            
             const colRef = collection(db, 'artifacts', appId, 'public', 'data', `walkietalkie_${channelName}`);
-            
             unsubscribeSnapshot = onSnapshot(colRef, (snapshot) => {
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const data = change.doc.data();
-                        
                         if (data.sender !== currentUser.uid && data.clientTimestamp > joinTimestamp) {
-                            queueAudio(data.audioData);
+                            audioQueue.push(data.audioData);
+                            if (!isPlaying && !isRecording) playNextAudio();
                         }
                     }
                 });
-            }, (error) => {
-                console.error("Firestore Listen Error:", error);
-                showToast("通信が切断されました", "error");
             });
-        }
-
-        function queueAudio(base64Audio) {
-            audioQueue.push(base64Audio);
-            if (!isPlaying && !isRecording) {
-                playNextAudio();
-            }
         }
 
         function playNextAudio() {
-            if (audioQueue.length === 0) {
-                isPlaying = false;
-                if(!isRecording) setStatus('STANDBY');
-                return;
-            }
-
+            if (audioQueue.length === 0) { isPlaying = false; setStatus('STANDBY'); return; }
             isPlaying = true;
             setStatus('PLAYING');
-            
-            const base64Audio = audioQueue.shift();
-            const audio = new Audio(base64Audio);
-            
-            audio.onended = () => {
-                playNextAudio();
-            };
-            
-            audio.onerror = (e) => {
-                console.error("Audio playback error", e);
-                playNextAudio(); 
-            };
-
-            audio.play().catch(e => {
-                console.error("Auto-play prevented:", e);
-                showToast("音声再生がブロックされました。画面をタップしてください。", "error");
-                playNextAudio();
-            });
+            const audio = new Audio(audioQueue.shift());
+            audio.onended = () => playNextAudio();
+            audio.onerror = () => playNextAudio();
+            audio.play().catch(() => playNextAudio());
         }
 
-        // Push To Talk Logic
+        // 録音ロジック
         function startRecording(e) {
-            if (e && e.cancelable) e.preventDefault(); 
-            
-            if (!mediaRecorder || isRecording || isPlaying) {
-                if (isPlaying) showToast("受信中は送信できません", "error");
-                return;
-            }
-            
+            if (e && e.cancelable) e.preventDefault();
+            if (!mediaRecorder || isRecording || isPlaying) return;
             isRecording = true;
             audioChunks = [];
-            pttBtn.classList.add('ptt-active');
+            pttBtn.classList.add('ptt-active', 'recording-pulse');
             setStatus('RECORDING');
-            pttBtn.classList.add('recording-pulse');
-            
-            try {
-                mediaRecorder.start();
-            } catch(err) {
-                console.error("録音開始エラー:", err);
-                isRecording = false;
-                pttBtn.classList.remove('ptt-active');
-                pttBtn.classList.remove('recording-pulse');
-                setStatus('STANDBY');
-            }
+            mediaRecorder.start();
         }
 
-        function stopRecording(e) {
+        function stopRecording() {
             if (!isRecording) return;
-            
             isRecording = false;
-            pttBtn.classList.remove('ptt-active');
-            pttBtn.classList.remove('recording-pulse');
+            pttBtn.classList.remove('ptt-active', 'recording-pulse');
             setStatus('STANDBY');
-            
-            try {
-                if (mediaRecorder.state !== "inactive") {
-                    mediaRecorder.stop();
-                }
-            } catch(err) {
-                console.error("録音停止エラー:", err);
-            }
+            if (mediaRecorder.state !== "inactive") mediaRecorder.stop();
         }
 
-        // --- タッチイベントの最適化 ---
         pttBtn.addEventListener('mousedown', startRecording);
         window.addEventListener('mouseup', stopRecording);
-        pttBtn.addEventListener('mouseleave', stopRecording);
-
         pttBtn.addEventListener('touchstart', startRecording, { passive: false });
         pttBtn.addEventListener('touchend', stopRecording);
-        pttBtn.addEventListener('touchcancel', stopRecording);
-
 
         async function processAudioAndSend() {
             if (audioChunks.length === 0) return;
-            
-            const mimeType = mediaRecorder.mimeType || 'audio/webm';
-            const audioBlob = new Blob(audioChunks, { type: mimeType });
-            
-            if (audioBlob.size < 500) {
-                audioChunks = [];
-                return;
-            }
+            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+            if (audioBlob.size < 500) return;
             
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             reader.onloadend = async () => {
-                const base64Audio = reader.result;
                 try {
                     const colRef = collection(db, 'artifacts', appId, 'public', 'data', `walkietalkie_${currentChannel}`);
                     await addDoc(colRef, {
-                        audioData: base64Audio,
+                        audioData: reader.result,
                         sender: currentUser.uid,
                         clientTimestamp: Date.now(),
-                        timestamp: serverTimestamp() 
+                        timestamp: serverTimestamp()
                     });
                 } catch (err) {
-                    console.error("送信エラー:", err);
-                    showToast("送信に失敗しました。Firebaseのルールを確認してください。", "error");
-                } finally {
-                    audioChunks = []; 
+                    showToast("送信失敗。ルールを確認してください。");
                 }
             };
         }
-
-        // 🚀 【バグ修正】画面読み込み完了を待たずに即時実行
-        connectBtn.disabled = true;
-        connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> サーバー接続中...';
-        initFirebase();
-
     </script>
 </body>
 </html>
