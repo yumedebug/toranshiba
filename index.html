@@ -25,55 +25,41 @@
             <i class="fas fa-walkie-talkie text-3xl text-green-400"></i>
         </div>
         <h1 class="text-2xl font-bold mb-2">Web Transceiver</h1>
-        <p class="text-gray-400 text-sm mb-6 text-center">共通のパスワードと、チャンネルを選んで通信します。</p>
+        <p class="text-gray-400 text-sm mb-6 text-center">共通のパスワードを設定して通信を開始します。</p>
         
-        <div class="w-full mb-4">
-            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">1. グループパスワード</label>
+        <div class="w-full mb-8">
+            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">グループパスワード</label>
             <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center"><i class="fas fa-key text-gray-500"></i></div>
                 <input type="text" id="password-input" class="w-full bg-gray-900 text-white border border-gray-600 rounded-xl pl-10 pr-4 py-3 focus:outline-none" placeholder="例: teamA" />
             </div>
         </div>
-
-        <div class="w-full mb-8">
-            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">2. チャンネル（部屋番号）</label>
-            <div class="flex flex-col gap-2">
-                <div class="grid grid-cols-3 gap-2">
-                    <button type="button" data-ch="1" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-green-900/40 border-green-500 text-green-400 ring-2 ring-green-500">
-                        CH-1
-                    </button>
-                    <button type="button" data-ch="2" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">
-                        CH-2
-                    </button>
-                    <button type="button" data-ch="3" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">
-                        CH-3
-                    </button>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" data-ch="4" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">
-                        CH-4
-                    </button>
-                    <button type="button" data-ch="5" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">
-                        CH-5
-                    </button>
-                </div>
-            </div>
-        </div>
         
         <button id="connect-btn" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg flex justify-center items-center gap-2">
-            <i class="fas fa-signal"></i> 通信を開始する
+            <i class="fas fa-signal"></i> 接続する
         </button>
         <div id="login-error" class="text-red-400 text-sm mt-4 text-center hidden bg-red-900/30 p-2 rounded w-full"></div>
     </div>
 
     <div id="transceiver-screen" class="hidden flex-col items-center max-w-sm w-full bg-gray-800 rounded-3xl pb-10 shadow-2xl border border-gray-700 overflow-hidden">
-        <div class="bg-gray-900 w-full p-5 flex justify-between items-center border-b border-gray-700">
-            <div class="text-green-400 font-mono font-bold text-lg">
+        <div class="bg-gray-900 w-full p-4 flex justify-between items-center border-b border-gray-700">
+            <div class="text-green-400 font-mono font-bold text-sm truncate max-w-[70%]">
                 <i class="fas fa-broadcast-tower mr-1"></i> <span id="current-channel" class="ml-1 uppercase">---</span>
             </div>
-            <button id="disconnect-btn" class="text-gray-400 hover:text-red-400 text-sm bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
+            <button id="disconnect-btn" class="text-gray-400 hover:text-red-400 text-sm bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700 whitespace-nowrap">
                 <i class="fas fa-power-off"></i> 切断
             </button>
+        </div>
+
+        <div class="w-full px-4 pt-4 pb-2 bg-gray-800 border-b border-gray-700">
+            <label class="block text-gray-400 text-[10px] font-bold mb-2 uppercase text-center">チャンネル切り替え</label>
+            <div class="grid grid-cols-5 gap-1">
+                <button type="button" data-ch="1" class="ch-select-btn py-2 rounded-lg text-xs font-bold border transition-all bg-green-900/40 border-green-500 text-green-400 ring-1 ring-green-500">1</button>
+                <button type="button" data-ch="2" class="ch-select-btn py-2 rounded-lg text-xs font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">2</button>
+                <button type="button" data-ch="3" class="ch-select-btn py-2 rounded-lg text-xs font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">3</button>
+                <button type="button" data-ch="4" class="ch-select-btn py-2 rounded-lg text-xs font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">4</button>
+                <button type="button" data-ch="5" class="ch-select-btn py-2 rounded-lg text-xs font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">5</button>
+            </div>
         </div>
         
         <div class="relative w-56 mt-8 mb-6 flex justify-center items-center">
@@ -125,6 +111,7 @@
         const chButtons = document.querySelectorAll('.ch-select-btn');
 
         let currentUser = null;
+        let currentPassword = '';
         let currentChannel = '';
         let selectedChNumber = '1'; 
         let unsubscribeSnapshot = null;
@@ -136,17 +123,49 @@
         let isRecording = false;
         let isPlaying = false;
         let audioQueue = [];
+        let currentAudio = null; // 再生中のオーディオオブジェクトを管理
 
-        // 5つのボタンの切り替え処理
+        // トランシーバー画面でのチャンネル切り替えボタンイベント
         chButtons.forEach(btn => {
             btn.addEventListener('click', () => {
+                if (!currentPassword) return; // 接続前は無視
+
+                // UIの見た目を更新
                 chButtons.forEach(b => {
-                    b.className = "ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400";
+                    b.className = "ch-select-btn py-2 rounded-lg text-xs font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400";
                 });
-                btn.className = "ch-select-btn py-3 rounded-xl font-bold border transition-all bg-green-900/40 border-green-500 text-green-400 ring-2 ring-green-500";
+                btn.className = "ch-select-btn py-2 rounded-lg text-xs font-bold border transition-all bg-green-900/40 border-green-500 text-green-400 ring-1 ring-green-500";
+                
                 selectedChNumber = btn.getAttribute('data-ch');
+                changeChannel();
             });
         });
+
+        // チャンネルを切り替えて再リスニングする関数
+        function changeChannel() {
+            // 前のリスナーを解除
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+                unsubscribeSnapshot = null;
+            }
+
+            // オーディオキューをクリアし、再生中の音声を停止
+            audioQueue = [];
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            isPlaying = false;
+            isRecording = false;
+            setStatus('STANDBY');
+
+            // 新しいチャンネルを設定してリスニング再開
+            currentChannel = `${currentPassword}_ch${selectedChNumber}`;
+            currentChannelEl.innerText = `${currentPassword} [CH-${selectedChNumber}]`;
+            
+            showToast(`CH-${selectedChNumber} に切り替えました`);
+            startListening(currentChannel);
+        }
 
         // Firebase初期化
         try {
@@ -172,14 +191,17 @@
 
         function showToast(msg) {
             const toast = document.createElement('div');
-            toast.className = `bg-gray-800 border border-gray-600 text-white px-4 py-3 rounded-xl shadow-2xl text-sm flex items-center justify-center`;
+            toast.className = `bg-gray-800 border border-gray-600 text-white px-4 py-3 rounded-xl shadow-2xl text-sm flex items-center justify-center transition-opacity duration-300`;
             toast.innerHTML = `<span>${msg}</span>`;
             toastContainer.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         function setStatus(state) {
-            statusLight.className = "w-6 h-6 rounded-full mb-2";
+            statusLight.className = "w-6 h-6 rounded-full shadow-lg mb-2";
             if (state === 'STANDBY') {
                 statusLight.classList.add('bg-green-500');
                 statusText.innerText = "STANDBY";
@@ -235,16 +257,16 @@
                 return;
             }
 
-            // 選んだチャンネル（1〜5）を部屋名に結合
-            currentChannel = `${safePwd}_ch${selectedChNumber}`;
-            currentChannelEl.innerText = `${pwd} [CH-${selectedChNumber}]`;
+            // パスワードを保持
+            currentPassword = safePwd;
             
+            // 画面切り替え
             loginScreen.classList.add('hidden');
             transceiverScreen.classList.remove('hidden');
             transceiverScreen.classList.add('flex');
             
-            setStatus('STANDBY');
-            startListening(currentChannel);
+            // チャンネル接続処理を呼び出し（デフォルトCH1で開始）
+            changeChannel();
         });
 
         disconnectBtn.addEventListener('click', () => {
@@ -268,13 +290,18 @@
         }
 
         function playNextAudio() {
-            if (audioQueue.length === 0) { isPlaying = false; setStatus('STANDBY'); return; }
+            if (audioQueue.length === 0) { 
+                isPlaying = false; 
+                currentAudio = null;
+                setStatus('STANDBY'); 
+                return; 
+            }
             isPlaying = true;
             setStatus('PLAYING');
-            const audio = new Audio(audioQueue.shift());
-            audio.onended = () => playNextAudio();
-            audio.onerror = () => playNextAudio();
-            audio.play().catch(() => playNextAudio());
+            currentAudio = new Audio(audioQueue.shift());
+            currentAudio.onended = () => playNextAudio();
+            currentAudio.onerror = () => playNextAudio();
+            currentAudio.play().catch(() => playNextAudio());
         }
 
         function startRecording(e) {
