@@ -25,13 +25,38 @@
             <i class="fas fa-walkie-talkie text-3xl text-green-400"></i>
         </div>
         <h1 class="text-2xl font-bold mb-2">Web Transceiver</h1>
-        <p class="text-gray-400 text-sm mb-8 text-center">同じパスワードで通信できます。</p>
+        <p class="text-gray-400 text-sm mb-6 text-center">共通のパスワードと、チャンネルを選んで通信します。</p>
         
-        <div class="w-full mb-6">
-            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">Channel Password</label>
+        <div class="w-full mb-4">
+            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">1. グループパスワード</label>
             <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center"><i class="fas fa-key text-gray-500"></i></div>
-                <input type="text" id="password-input" class="w-full bg-gray-900 text-white border border-gray-600 rounded-xl pl-10 pr-4 py-3 focus:outline-none" placeholder="半角英数字で入力..." />
+                <input type="text" id="password-input" class="w-full bg-gray-900 text-white border border-gray-600 rounded-xl pl-10 pr-4 py-3 focus:outline-none" placeholder="例: teamA" />
+            </div>
+        </div>
+
+        <div class="w-full mb-8">
+            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">2. チャンネル（部屋番号）</label>
+            <div class="flex flex-col gap-2">
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" data-ch="1" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-green-900/40 border-green-500 text-green-400 ring-2 ring-green-500">
+                        CH-1
+                    </button>
+                    <button type="button" data-ch="2" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">
+                        CH-2
+                    </button>
+                    <button type="button" data-ch="3" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">
+                        CH-3
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" data-ch="4" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">
+                        CH-4
+                    </button>
+                    <button type="button" data-ch="5" class="ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400">
+                        CH-5
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -44,7 +69,7 @@
     <div id="transceiver-screen" class="hidden flex-col items-center max-w-sm w-full bg-gray-800 rounded-3xl pb-10 shadow-2xl border border-gray-700 overflow-hidden">
         <div class="bg-gray-900 w-full p-5 flex justify-between items-center border-b border-gray-700">
             <div class="text-green-400 font-mono font-bold text-lg">
-                <i class="fas fa-broadcast-tower mr-2"></i> CH-<span id="current-channel" class="ml-1 uppercase">---</span>
+                <i class="fas fa-broadcast-tower mr-1"></i> <span id="current-channel" class="ml-1 uppercase">---</span>
             </div>
             <button id="disconnect-btn" class="text-gray-400 hover:text-red-400 text-sm bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
                 <i class="fas fa-power-off"></i> 切断
@@ -97,9 +122,11 @@
         const statusText = document.getElementById('status-text');
         const loginError = document.getElementById('login-error');
         const toastContainer = document.getElementById('toast-container');
+        const chButtons = document.querySelectorAll('.ch-select-btn');
 
         let currentUser = null;
         let currentChannel = '';
+        let selectedChNumber = '1'; 
         let unsubscribeSnapshot = null;
         let db, auth;
         let joinTimestamp = 0;
@@ -110,18 +137,27 @@
         let isPlaying = false;
         let audioQueue = [];
 
-        // 起動時にまずFirebaseを即初期化
+        // 5つのボタンの切り替え処理
+        chButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                chButtons.forEach(b => {
+                    b.className = "ch-select-btn py-3 rounded-xl font-bold border transition-all bg-gray-900 border-gray-700 text-gray-400";
+                });
+                btn.className = "ch-select-btn py-3 rounded-xl font-bold border transition-all bg-green-900/40 border-green-500 text-green-400 ring-2 ring-green-500";
+                selectedChNumber = btn.getAttribute('data-ch');
+            });
+        });
+
+        // Firebase初期化
         try {
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
             
-            // バックグラウンドで勝手にログインさせる
             signInAnonymously(auth).then(cred => {
                 currentUser = cred.user;
             }).catch(e => {
                 console.error(e);
-                // 失敗してもボタンは押せるようにエラー表示だけに留める
                 showError("匿名ログインに失敗しました。リロードしてください。");
             });
         } catch (err) {
@@ -134,7 +170,7 @@
             loginError.classList.remove('hidden');
         }
 
-        function showToast(msg, type="info") {
+        function showToast(msg) {
             const toast = document.createElement('div');
             toast.className = `bg-gray-800 border border-gray-600 text-white px-4 py-3 rounded-xl shadow-2xl text-sm flex items-center justify-center`;
             toast.innerHTML = `<span>${msg}</span>`;
@@ -156,7 +192,7 @@
             }
         }
         
-        // ボタンクリックイベント
+        // 接続処理
         connectBtn.addEventListener('click', async () => {
             loginError.classList.add('hidden');
             const pwd = passwordInput.value.trim();
@@ -166,13 +202,12 @@
                 return;
             }
             
-            const safeChannel = pwd.replace(/[^a-zA-Z0-9]/g, '');
-            if(!safeChannel) {
+            const safePwd = pwd.replace(/[^a-zA-Z0-9]/g, '');
+            if(!safePwd) {
                 showError("パスワードは半角英数字で入力してください");
                 return;
             }
 
-            // もしログインがまだ完了していなければ、ここで強制的に再ログインを試みる
             if (!currentUser && auth) {
                 try {
                     const cred = await signInAnonymously(auth);
@@ -183,7 +218,6 @@
                 }
             }
 
-            // マイクが使える環境かチェック
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 showError("このブラウザ環境はマイクに対応していません。https でアクセスしているか確認してください。");
                 return;
@@ -201,19 +235,20 @@
                 return;
             }
 
-            currentChannel = safeChannel;
-            currentChannelEl.innerText = safeChannel;
+            // 選んだチャンネル（1〜5）を部屋名に結合
+            currentChannel = `${safePwd}_ch${selectedChNumber}`;
+            currentChannelEl.innerText = `${pwd} [CH-${selectedChNumber}]`;
             
             loginScreen.classList.add('hidden');
             transceiverScreen.classList.remove('hidden');
             transceiverScreen.classList.add('flex');
             
             setStatus('STANDBY');
-            startListening(safeChannel);
+            startListening(currentChannel);
         });
 
         disconnectBtn.addEventListener('click', () => {
-            location.reload(); // 確実にすべてをリセットするため、切断時はページごとリロード
+            location.reload(); 
         });
 
         function startListening(channelName) {
@@ -242,7 +277,6 @@
             audio.play().catch(() => playNextAudio());
         }
 
-        // 録音ロジック
         function startRecording(e) {
             if (e && e.cancelable) e.preventDefault();
             if (!mediaRecorder || isRecording || isPlaying) return;
